@@ -450,8 +450,13 @@ app.post("/projects", upload.any(), async (req, res) => {
 });
 
 app.get("/projects", async (req, res) => {
-    const projects = await Project.find().populate("companyId", "name logo");
-    res.json(projects);
+    try {
+        const projects = await Project.find().populate("companyId", "name logo");
+        res.json(projects);
+    } catch (error) {
+        console.error("GET Projects Error:", error);
+        res.status(500).json({ message: "Error fetching projects", error: error.message });
+    }
 });
 
 
@@ -869,13 +874,14 @@ app.post('/companies', async (req, res) => {
 })
 
 app.get('/companies', async (req, res) => {
-    const companies = await Company.find()
-    if (companies.length > 0) {
-        res.send(companies)
-    } else {
-        res.send("No Companies Found")
+    try {
+        const companies = await Company.find();
+        res.json(companies); // Always return an array, even if empty
+    } catch (error) {
+        console.error("GET Companies Error:", error);
+        res.status(500).json({ message: "Error fetching companies", error: error.message });
     }
-})
+});
 
 app.get('/companies/:_id', async (req, res) => {
     const { _id } = req.params;
