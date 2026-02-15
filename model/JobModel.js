@@ -37,7 +37,9 @@ const jobSchema = new mongoose.Schema(
         salary: String,
         category: String,
         image: String,
-
+        image2: String,
+        responsibilities: [String],
+        skills: [String],
         // 🔑 IMPORTANT
         recruiterId: {
             type: mongoose.Schema.Types.ObjectId,

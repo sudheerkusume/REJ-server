@@ -816,11 +816,25 @@ app.delete('/enquiries/:_id', async (req, res) => {
 
 // -----------Job Category Routes-----------
 
+// app.post('/jobCategories', async (req, res) => {
+//     const jobCategories = new JobCategory(req.body)
+//     const result = await jobCategories.save()
+//     res.send(result)
+// })
+
 app.post('/jobCategories', async (req, res) => {
-    const jobCategories = new JobCategory(req.body)
-    const result = await jobCategories.save()
-    res.send(result)
-})
+    try {
+        const jobCategories = new JobCategory(req.body);
+        const result = await jobCategories.save();
+        res.status(201).json(result);
+    } catch (error) {
+        console.error("JobCategory create error:", error.message);
+        res.status(400).json({
+            message: "Invalid job category data",
+            error: error.message
+        });
+    }
+});
 
 app.get('/jobCategories', async (req, res) => {
     const jobs = await JobCategory.find();
