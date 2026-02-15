@@ -339,6 +339,7 @@
 
 // app.listen(5000, () => console.log('API Started on port 5000'))
 
+require("dotenv").config();
 require("./db");
 
 const express = require("express");
@@ -404,10 +405,11 @@ app.post("/projects", upload.any(), async (req, res) => {
         // Parse JSON fields
         const jsonFields = ["faqs", "amenities", "connectivity"];
         jsonFields.forEach(field => {
-            if (projectData[field] && typeof projectData[field] === "string") {
+            if (projectData[field] && typeof projectData[field] === "string" && projectData[field].trim() !== "") {
                 try {
                     projectData[field] = JSON.parse(projectData[field]);
-                } catch {
+                } catch (parseError) {
+                    console.error(`Error parsing JSON field ${field}:`, parseError.message);
                     projectData[field] = [];
                 }
             }
@@ -422,7 +424,10 @@ app.post("/projects", upload.any(), async (req, res) => {
                 if (["heroVideo", "amenitiesBackground", "brochure"].includes(fieldName)) {
                     projectData[fieldName] = fileUrl;
                 } else {
-                    if (!projectData[fieldName]) projectData[fieldName] = [];
+                    // Ensure the field is an array before pushing
+                    if (!Array.isArray(projectData[fieldName])) {
+                        projectData[fieldName] = [];
+                    }
                     projectData[fieldName].push(fileUrl);
                 }
             });
@@ -436,7 +441,11 @@ app.post("/projects", upload.any(), async (req, res) => {
         res.status(201).json({ message: "Project added successfully", project });
     } catch (error) {
         console.error("Project Upload Error:", error);
-        res.status(500).json({ message: "Error adding project" });
+        res.status(500).json({
+            message: "Error adding project",
+            error: error.message,
+            details: error.errors // Include Mongoose validation errors if any
+        });
     }
 });
 
@@ -463,12 +472,6 @@ app.get("/projects/company/:companyId", async (req, res) => {
         console.error("Company Project Fetch Error:", err); // 👈 ADD THIS
         res.status(500).json({ message: "Error fetching company projects" });
     }
-});
-
-app.get("/projects/:id", async (req, res) => {
-    const project = await Project.findById(req.params.id)
-        .populate("companyId", "name logo");
-    res.json(project);
 });
 
 

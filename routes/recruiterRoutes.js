@@ -12,7 +12,7 @@ router.post("/jobs", recruiterAuth, async (req, res) => {
 });
 
 router.post("/add-job", recruiterAuth, async (req, res) => {
-    const job = new JobCategory({
+    const job = new Job({
         ...req.body,
         recruiterId: req.recruiterId, // recruiter owns job
         createdBy: req.recruiterId,
