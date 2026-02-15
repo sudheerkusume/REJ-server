@@ -5,10 +5,12 @@ const cloudinary = require("../config/cloudinary");
 const storage = new CloudinaryStorage({
     cloudinary,
     params: async (req, file) => {
-        let resourceType = "image";
+        let resourceType = "auto"; // Default to auto to handle images, videos, and raw files (PDFs)
 
         if (file.mimetype.startsWith("video/")) {
             resourceType = "video";
+        } else if (file.mimetype.startsWith("image/")) {
+            resourceType = "image";
         }
 
         return {

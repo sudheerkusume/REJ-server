@@ -397,7 +397,18 @@ app.use("/", jobApplyRoutes)
 
 
 //  Project Form 
-app.post("/projects", upload.any(), async (req, res) => {
+app.post("/projects", (req, res, next) => {
+    upload.any()(req, res, (err) => {
+        if (err) {
+            console.error("Multer/Cloudinary Error:", err);
+            return res.status(500).json({
+                message: "File upload failed",
+                error: err.message
+            });
+        }
+        next();
+    });
+}, async (req, res) => {
     try {
         console.log("--- Project Upload Started ---");
         const projectData = { ...req.body };
@@ -984,8 +995,14 @@ app.delete('/certifications/:_id', async (req, res) => {
 })
 
 
-/* ================= SERVER ================= */
-
+// Global Error Handler
+app.use((err, req, res, next) => {
+    console.error("Global Error Handler:", err.stack);
+    res.status(500).json({
+        message: "Internal Server Error",
+        error: process.env.NODE_ENV === "production" ? {} : err.message
+    });
+});
 
 const PORT = process.env.PORT || 5000;
 
