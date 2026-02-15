@@ -420,15 +420,13 @@ app.post("/projects", upload.any(), async (req, res) => {
         if (req.files && req.files.length > 0) {
             req.files.forEach(file => {
                 const fieldName = file.fieldname;
-                const filePath = `/uploads/${file.filename}`;
+                const fileUrl = file.path; // 🌍 CLOUDINARY URL
 
-                if (fieldName === "heroVideo" || fieldName === "amenitiesBackground" || fieldName === "brochure") {
-                    projectData[fieldName] = filePath;
-                } else if (fieldName === "backgroundImages" || fieldName === "gallery" || fieldName === "amenitiesGallery") {
+                if (["heroVideo", "amenitiesBackground", "brochure"].includes(fieldName)) {
+                    projectData[fieldName] = fileUrl;
+                } else {
                     if (!projectData[fieldName]) projectData[fieldName] = [];
-                    // Ensure it's an array if it was parsed or initialized
-                    if (!Array.isArray(projectData[fieldName])) projectData[fieldName] = [];
-                    projectData[fieldName].push(filePath);
+                    projectData[fieldName].push(fileUrl);
                 }
             });
         }
