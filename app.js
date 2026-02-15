@@ -401,26 +401,23 @@ app.post("/projects", upload.any(), async (req, res) => {
         console.log("--- Project Upload Started ---");
         const projectData = { ...req.body };
 
-        // Parse JSON fields if they are strings (robust parsing)
+        // Parse JSON fields
         const jsonFields = ["faqs", "amenities", "connectivity"];
         jsonFields.forEach(field => {
-            if (projectData[field]) {
+            if (projectData[field] && typeof projectData[field] === "string") {
                 try {
-                    if (typeof projectData[field] === "string") {
-                        projectData[field] = JSON.parse(projectData[field]);
-                    }
-                } catch (e) {
-                    console.error(`Error parsing ${field}:`, e);
-                    projectData[field] = []; // Fallback to empty array
+                    projectData[field] = JSON.parse(projectData[field]);
+                } catch {
+                    projectData[field] = [];
                 }
             }
         });
 
-        // Process Files Dynamically
+        // ✅ FIXED FILE HANDLING
         if (req.files && req.files.length > 0) {
             req.files.forEach(file => {
                 const fieldName = file.fieldname;
-                const fileUrl = file.path; // 🌍 CLOUDINARY URL
+                const fileUrl = file.url; // ✅ CLOUDINARY URL
 
                 if (["heroVideo", "amenitiesBackground", "brochure"].includes(fieldName)) {
                     projectData[fieldName] = fileUrl;
@@ -431,20 +428,15 @@ app.post("/projects", upload.any(), async (req, res) => {
             });
         }
 
-        console.log("Processed Project Data:", JSON.stringify(projectData, null, 2));
+        console.log("Processed Project Data:", projectData);
 
         const project = new Project(projectData);
         await project.save();
 
         res.status(201).json({ message: "Project added successfully", project });
-
     } catch (error) {
-        console.error("Project Upload Error Details:", error);
-        res.status(500).json({
-            message: "Error adding project",
-            error: error.message,
-            stack: error.stack
-        });
+        console.error("Project Upload Error:", error);
+        res.status(500).json({ message: "Error adding project" });
     }
 });
 
