@@ -417,7 +417,7 @@ app.post("/projects", upload.any(), async (req, res) => {
         if (req.files && req.files.length > 0) {
             req.files.forEach(file => {
                 const fieldName = file.fieldname;
-                const fileUrl = file.url; // ✅ CLOUDINARY URL
+                const fileUrl = file.path; // ✅ CLOUDINARY URL
 
                 if (["heroVideo", "amenitiesBackground", "brochure"].includes(fieldName)) {
                     projectData[fieldName] = fileUrl;
@@ -977,6 +977,9 @@ app.delete('/certifications/:_id', async (req, res) => {
 
 /* ================= SERVER ================= */
 
-app.listen(5000, () => {
-    console.log("Server running on port 5000");
+
+const PORT = process.env.PORT || 5000;
+
+app.listen(PORT, "0.0.0.0", () => {
+    console.log(`Server running on port ${PORT}`);
 });
