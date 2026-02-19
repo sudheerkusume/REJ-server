@@ -514,8 +514,9 @@ app.get("/admin/dashboard-stats", adminAuth, async (req, res) => {
         const shortlisted = await JobApplication.countDocuments({ ...filter, status: "Shortlisted" });
         const selected = await JobApplication.countDocuments({ ...filter, status: "Selected" });
         const rejected = await JobApplication.countDocuments({ ...filter, status: "Rejected" });
+        const activeJobs = await JobCategory.countDocuments({ companyId: req.userId });
 
-        res.json({ total, shortlisted, selected, rejected });
+        res.json({ total, shortlisted, selected, rejected, activeJobs });
     } catch (err) {
         res.status(500).json({ message: "Failed to load dashboard stats" });
     }
@@ -879,6 +880,15 @@ app.post('/jobCategories', async (req, res) => {
         });
     }
 });
+
+app.get('/admin/jobCategories', adminAuth, async (req, res) => {
+    const jobs = await JobCategory.find({ companyId: req.userId });
+    if (jobs.length > 0) {
+        res.send(jobs)
+    } else {
+        res.send([])
+    }
+})
 
 app.get('/jobCategories', async (req, res) => {
     const jobs = await JobCategory.find();
