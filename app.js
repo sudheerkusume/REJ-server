@@ -618,7 +618,7 @@ app.get("/auth/me", require("./middleware/auth"), async (req, res) => {
         const { id, role } = req.user;
         let profile;
 
-        if (role === "admin" || role === "user") {
+        if (role === "user") {
             profile = await usersModel.findById(id).select("-password");
         } else if (role === "recruiter") {
             profile = await Recruiter.findById(id).select("-password");
@@ -741,96 +741,17 @@ app.post("/recruiter/login", async (req, res) => {
 
 // ---------jobApply Routes---------
 // app.use("/", require("./routes/jobApply"))
-/* ================= ADMIN AUTH ================= */
+/* ================= USER AUTH ================= */
 
-// 🔹 Admin Signup
-app.post("/signup", async (req, res) => {
-    try {
-        const { email, password, cpassword } = req.body;
-
-        if (password !== cpassword) {
-            return res.status(400).json({ message: "Passwords do not match" });
-        }
-
-        const emailCheck = await checkEmailUnique(email);
-        if (emailCheck.exists) {
-            return res.status(400).json({ message: "Email already registered" });
-        }
-
-        const hashedPassword = await bcrypt.hash(password, 10);
-
-        const admin = new usersModel({
-            name: "Admin",
-            email,
-            password: hashedPassword,
-            role: "admin"
-        });
-
-        await admin.save();
-        res.json({ message: "Admin registered successfully" });
-
-    } catch (err) {
-        res.status(500).json({ error: err.message });
-    }
-});
-
-// 🔹 Admin Login
-// app.post("/Ulogin", async (req, res) => {
-//     try {
-//         const { email, password } = req.body;
-
-//         const admin = await usersModel.findOne({ email, role: "admin" });
-//         if (!admin) {
-//             return res.status(400).json({ message: "Admin not found" });
-//         }
-
-//         if (admin.password !== password) {
-//             return res.status(400).json({ message: "Invalid password" });
-//         }
-
-//         const token = jwt.sign(
-//             { id: admin._id, role: "admin" },
-//             ADMIN_SECRET,
-//             { expiresIn: "1d" }
-//         );
-
-//         res.json({ token });
-
-//     } catch (err) {
-//         res.status(500).json({ error: err.message });
-//     }
-// });
-app.post("/Ulogin", async (req, res) => {
-    try {
-        const { email, password } = req.body;
-
-        const admin = await usersModel.findOne({ email, role: "admin" });
-        if (!admin) {
-            return res.status(400).json({ message: "Admin not found" });
-        }
-
-        const isMatch = await bcrypt.compare(password, admin.password);
-        if (!isMatch) {
-            return res.status(400).json({ message: "Invalid password" });
-        }
-
-        const token = jwt.sign(
-            { id: admin._id, role: "admin" },
-            process.env.JWT_SECRET,
-            { expiresIn: "7d" }
-        );
-
-        res.json({ token });
-    } catch (err) {
-        res.status(500).json({ error: err.message });
-    }
-});
-
-
-// 🔹 Admin Dashboard (Protected)
+// 🔹 Company Dashboard (Protected)
 app.get("/dashboard", adminAuth, async (req, res) => {
-    const admin = await usersModel.findById(req.userId).select("-password");
-    res.json(admin);
+    try {
+        const user = await Company.findById(req.userId).select("-password");
+        if (!user) return res.status(404).json({ message: "User not found" });
+        res.json(user);
+    } catch (err) {
+        res.status(500).json({ message: "Server error" });
+    }
 });
 
 /* ================= USER AUTH ================= */

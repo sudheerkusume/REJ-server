@@ -12,11 +12,12 @@ const adminAuth = (req, res, next) => {
     try {
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
-        if (decoded.role !== "admin") {
+        if (decoded.role !== "company") {
             return res.status(403).json({ message: "Access denied" });
         }
 
         req.userId = decoded.id;
+        req.userRole = decoded.role;
         next();
     } catch (err) {
         return res.status(401).json({ message: "Invalid token" });
