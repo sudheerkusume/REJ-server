@@ -6,7 +6,7 @@ const adminAuth = require("../middleware/adminAuth");
 /* ================= GET ALL APPLICATIONS ================= */
 router.get("/admin/applications", adminAuth, async (req, res) => {
     try {
-        const applications = await JobApplication.find()
+        const applications = await JobApplication.find({ companyId: req.userId })
             .populate("userId", "name email")
             .populate("companyId", "name")
             .populate({
@@ -28,12 +28,13 @@ router.put("/admin/application-status/:id", adminAuth, async (req, res) => {
     try {
         const { status } = req.body;
 
-        const updated = await JobApplication.findByIdAndUpdate(
-            req.params.id,
+        const updated = await JobApplication.findOneAndUpdate(
+            { _id: req.params.id, companyId: req.userId },
             { status },
             { new: true }
         );
 
+        if (!updated) return res.status(404).json({ message: "Application not found" });
         res.json(updated);
     } catch (err) {
         console.error("Update status error:", err);

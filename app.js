@@ -509,17 +509,13 @@ app.get("/test-mail", async (req, res) => {
 
 app.get("/admin/dashboard-stats", adminAuth, async (req, res) => {
     try {
-        const total = await JobApplication.countDocuments();
-        const shortlisted = await JobApplication.countDocuments({ status: "Shortlisted" });
-        const selected = await JobApplication.countDocuments({ status: "Selected" });
-        const rejected = await JobApplication.countDocuments({ status: "Rejected" });
+        const filter = { companyId: req.userId };
+        const total = await JobApplication.countDocuments(filter);
+        const shortlisted = await JobApplication.countDocuments({ ...filter, status: "Shortlisted" });
+        const selected = await JobApplication.countDocuments({ ...filter, status: "Selected" });
+        const rejected = await JobApplication.countDocuments({ ...filter, status: "Rejected" });
 
-        res.json({
-            total,
-            shortlisted,
-            selected,
-            rejected
-        });
+        res.json({ total, shortlisted, selected, rejected });
     } catch (err) {
         res.status(500).json({ message: "Failed to load dashboard stats" });
     }
