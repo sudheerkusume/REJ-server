@@ -3,6 +3,9 @@ const mongoose = require("mongoose");
 const CompanySchema = new mongoose.Schema(
     {
         name: String,
+        email: { type: String, unique: true, sparse: true },
+        password: String,
+        role: { type: String, default: "company" },
         tagline: String,
         industry: String,
         location: String,

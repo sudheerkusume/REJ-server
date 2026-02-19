@@ -10,7 +10,7 @@ const adminAuth = (req, res, next) => {
     const token = authHeader.split(" ")[1];
 
     try {
-        const decoded = jwt.verify(token, "adminSecret123");
+        const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
         if (decoded.role !== "admin") {
             return res.status(403).json({ message: "Access denied" });
@@ -22,7 +22,5 @@ const adminAuth = (req, res, next) => {
         return res.status(401).json({ message: "Invalid token" });
     }
 };
-
-console.log("ADMIN AUTH MIDDLEWARE HIT");
 
 module.exports = adminAuth;

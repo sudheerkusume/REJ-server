@@ -372,10 +372,7 @@ const bcrypt = require("bcrypt");
 const adminAuth = require("./middleware/adminAuth");
 const userAuth = require("./middleware/userAuth");
 const recruiterRoutes = require("./routes/recruiterRoutes");
-// 🔐 Secrets
-const ADMIN_SECRET = "adminSecret123";
-const USER_SECRET = "userSecret123";
-const RECRUITER_SECRET = "recruiterSecret123";
+const checkEmailUnique = require("./helpers/checkEmailUnique");
 const jobApplyRoutes = require("./routes/jobApply");
 const applicationStatusRoutes = require("./routes/applicationStatus");
 const sendMail = require("./mailer");
@@ -560,6 +557,117 @@ app.delete("/my-applications/:id", userAuth, async (req, res) => {
 });
 
 
+/* ================= UNIFIED AUTH ================= */
+
+// Unified Login - searches User, Recruiter, Company tables
+app.post("/auth/login", async (req, res) => {
+    try {
+        const { email, password } = req.body;
+
+        if (!email || !password) {
+            return res.status(400).json({ message: "Email and password are required" });
+        }
+
+        const [user, recruiter, company] = await Promise.all([
+            usersModel.findOne({ email }),
+            Recruiter.findOne({ email }),
+            Company.findOne({ email }),
+        ]);
+
+        const matched = user || recruiter || company;
+
+        if (!matched) {
+            return res.status(400).json({ message: "No account found with this email" });
+        }
+
+        if (!matched.password) {
+            return res.status(400).json({ message: "Invalid password" });
+        }
+
+        const isMatch = await bcrypt.compare(password, matched.password);
+        if (!isMatch) {
+            return res.status(400).json({ message: "Invalid password" });
+        }
+
+        const role = matched.role || "user";
+
+        const token = jwt.sign(
+            { id: matched._id, role },
+            process.env.JWT_SECRET,
+            { expiresIn: "7d" }
+        );
+
+        res.json({
+            token,
+            role,
+            user: {
+                id: matched._id,
+                name: matched.name,
+                email: matched.email,
+            },
+        });
+    } catch (err) {
+        console.error("Unified login error:", err);
+        res.status(500).json({ message: "Server error" });
+    }
+});
+
+// Unified Profile
+app.get("/auth/me", require("./middleware/auth"), async (req, res) => {
+    try {
+        const { id, role } = req.user;
+        let profile;
+
+        if (role === "admin" || role === "user") {
+            profile = await usersModel.findById(id).select("-password");
+        } else if (role === "recruiter") {
+            profile = await Recruiter.findById(id).select("-password");
+        } else if (role === "company") {
+            profile = await Company.findById(id).select("-password");
+        }
+
+        if (!profile) {
+            return res.status(404).json({ message: "Profile not found" });
+        }
+
+        res.json({ ...profile.toObject(), role });
+    } catch (err) {
+        console.error("Auth/me error:", err);
+        res.status(500).json({ message: "Server error" });
+    }
+});
+
+// Company Signup
+app.post("/companies/signup", async (req, res) => {
+    try {
+        const { name, email, password } = req.body;
+
+        if (!name || !email || !password) {
+            return res.status(400).json({ message: "All fields required" });
+        }
+
+        const emailCheck = await checkEmailUnique(email);
+        if (emailCheck.exists) {
+            return res.status(400).json({ message: "Email already registered" });
+        }
+
+        const hashedPassword = await bcrypt.hash(password, 10);
+
+        const company = new Company({
+            name,
+            email,
+            password: hashedPassword,
+            role: "company",
+        });
+
+        await company.save();
+        res.json({ message: "Company registered successfully" });
+    } catch (err) {
+        console.error("Company signup error:", err);
+        res.status(500).json({ message: "Server error" });
+    }
+});
+
 // ---------------------RECRUITER AUTH---------------------
 
 app.post("/admin/create-recruiter", adminAuth, async (req, res) => {
@@ -573,9 +681,9 @@ app.post("/admin/create-recruiter", adminAuth, async (req, res) => {
             permissions
         } = req.body;
 
-        const exist = await Recruiter.findOne({ email });
-        if (exist) {
-            return res.status(400).json({ message: "Recruiter already exists" });
+        const emailCheck = await checkEmailUnique(email);
+        if (emailCheck.exists) {
+            return res.status(400).json({ message: "Email already registered" });
         }
 
         const hashedPassword = await bcrypt.hash(password, 10);
@@ -620,8 +728,8 @@ app.post("/recruiter/login", async (req, res) => {
 
         const token = jwt.sign(
             { id: recruiter._id, role: "recruiter" },
-            "recruiterSecret123",
-            { expiresIn: "2d" }
+            process.env.JWT_SECRET,
+            { expiresIn: "7d" }
         );
 
         res.json({ token });
@@ -644,15 +752,17 @@ app.post("/signup", async (req, res) => {
             return res.status(400).json({ message: "Passwords do not match" });
         }
 
-        const exist = await usersModel.findOne({ email });
-        if (exist) {
-            return res.status(400).json({ message: "Admin already exists" });
+        const emailCheck = await checkEmailUnique(email);
+        if (emailCheck.exists) {
+            return res.status(400).json({ message: "Email already registered" });
         }
+
+        const hashedPassword = await bcrypt.hash(password, 10);
 
         const admin = new usersModel({
             name: "Admin",
             email,
-            password,
+            password: hashedPassword,
             role: "admin"
         });
 
@@ -691,24 +801,29 @@ app.post("/signup", async (req, res) => {
 //     }
 // });
 app.post("/Ulogin", async (req, res) => {
-    const { email, password } = req.body;
+    try {
+        const { email, password } = req.body;
 
-    const admin = await usersModel.findOne({ email, role: "admin" });
-    if (!admin) {
-        return res.status(400).json({ message: "Admin not found" });
+        const admin = await usersModel.findOne({ email, role: "admin" });
+        if (!admin) {
+            return res.status(400).json({ message: "Admin not found" });
+        }
+
+        const isMatch = await bcrypt.compare(password, admin.password);
+        if (!isMatch) {
+            return res.status(400).json({ message: "Invalid password" });
+        }
+
+        const token = jwt.sign(
+            { id: admin._id, role: "admin" },
+            process.env.JWT_SECRET,
+            { expiresIn: "7d" }
+        );
+
+        res.json({ token });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
     }
-
-    if (admin.password !== password) {
-        return res.status(400).json({ message: "Invalid password" });
-    }
-
-    const token = jwt.sign(
-        { id: admin._id, role: "admin" },
-        "adminSecret123",
-        { expiresIn: "1d" }
-    );
-
-    res.json({ token });
 });
 
 
@@ -729,15 +844,17 @@ app.post("/users/signup", async (req, res) => {
             return res.status(400).json({ message: "All fields required" });
         }
 
-        const exist = await usersModel.findOne({ email });
-        if (exist) {
-            return res.status(400).json({ message: "User already exists" });
+        const emailCheck = await checkEmailUnique(email);
+        if (emailCheck.exists) {
+            return res.status(400).json({ message: "Email already registered" });
         }
+
+        const hashedPassword = await bcrypt.hash(password, 10);
 
         const user = new usersModel({
             name,
             email,
-            password,
+            password: hashedPassword,
             role: "user"
         });
 
@@ -759,13 +876,14 @@ app.post("/users/login", async (req, res) => {
             return res.status(400).json({ message: "User not found" });
         }
 
-        if (user.password !== password) {
+        const isMatch = await bcrypt.compare(password, user.password);
+        if (!isMatch) {
             return res.status(400).json({ message: "Invalid password" });
         }
 
         const token = jwt.sign(
             { id: user._id, role: "user" },
-            USER_SECRET,
+            process.env.JWT_SECRET,
             { expiresIn: "7d" }
         );
 
@@ -1004,7 +1122,7 @@ app.use((err, req, res, next) => {
     });
 });
 
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.PORT || 5001;
 
 app.listen(PORT, "0.0.0.0", () => {
     console.log(`Server running on port ${PORT}`);
