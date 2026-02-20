@@ -1,5 +1,6 @@
 const mongoose = require("mongoose");
-const dburl = 'mongodb+srv://rockycreta_db_user:Sudheer123@rej.uxyl2gk.mongodb.net/?appName=REJ';
+require("dotenv").config();
+const dburl = process.env.MONGO_URI;
 
 mongoose.connect(dburl)
     .then(() => {
