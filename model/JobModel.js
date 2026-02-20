@@ -34,22 +34,32 @@ const jobSchema = new mongoose.Schema(
         title: String,
         description: String,
         location: String,
-        salary: String,
+        preferredArea: String,
+        salary: {
+            min: String,
+            max: String,
+            commission: String,
+        },
         category: String,
+        company: String,
         image: String,
         image2: String,
+        type: String,
+        jobRoleType: String,
+        experience: String,
+        qualification: [String],
         responsibilities: [String],
         skills: [String],
-        // 🔑 IMPORTANT
+        benefits: [String],
+        languages: [String],
+        salesTargets: String,
         recruiterId: {
             type: mongoose.Schema.Types.ObjectId,
             ref: "Recruiter"
         },
-
         companyId: {
             type: mongoose.Schema.Types.ObjectId,
             ref: "Company",
-
         }
     },
     { timestamps: true }
