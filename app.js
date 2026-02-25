@@ -751,6 +751,25 @@ app.get("/dashboard", adminAuth, async (req, res) => {
     }
 });
 
+// 🔹 Update Company Profile (Protected)
+app.patch("/dashboard", adminAuth, async (req, res) => {
+    try {
+        const updatedUser = await Company.findByIdAndUpdate(
+            req.userId,
+            { $set: req.body },
+            { new: true, runValidators: true }
+        ).select("-password");
+
+        if (!updatedUser) {
+            return res.status(404).json({ message: "User not found" });
+        }
+        res.json(updatedUser);
+    } catch (err) {
+        console.error("Dashboard update error:", err);
+        res.status(500).json({ message: "Server error" });
+    }
+});
+
 /* ================= USER AUTH ================= */
 
 // 🔹 User Signup
