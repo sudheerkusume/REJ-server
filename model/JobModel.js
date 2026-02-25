@@ -1,58 +1,35 @@
-// const mongoose = require("mongoose");
-
-// const JobSchema = new mongoose.Schema(
-//     {
-//         companyId: {
-//             type: mongoose.Schema.Types.ObjectId,
-//             ref: "Company",
-//             required: true
-//         },
-//         category: String,
-//         image: String,
-//         image2: String,
-//         title: String,
-//         company: String,
-//         location: String,
-//         location2: String,
-//         type: String,
-//         experience: String,
-//         salary: String,
-//         qualification: String,
-//         description: String,
-//         responsibilities: [String],
-//         skills: [String]
-//     },
-//     { timestamps: true }
-// );
-
-// module.exports = mongoose.model("jobcategories", JobSchema);
-
 const mongoose = require("mongoose");
 
 const jobSchema = new mongoose.Schema(
     {
-        title: String,
+        title: { type: String, required: true },
+        company: String,
         description: String,
-        location: String,
-        preferredArea: String,
+        location: String, // City
+        preferredArea: String, // Local area (Single selection)
         salary: {
+
             min: String,
             max: String,
             commission: String,
+
         },
         category: String,
-        company: String,
-        image: String,
-        image2: String,
-        type: String,
-        jobRoleType: String,
+        type: String, // Full-time / Part-time
+        jobRoleType: String, // Office / Hybrid etc
         experience: String,
         qualification: [String],
+
+        image: String, // Category Icon
+        image2: String, // Banner
         responsibilities: [String],
         skills: [String],
+        salesTargets: String,
         benefits: [String],
         languages: [String],
-        salesTargets: String,
+        propertyTypes: [String],
+
+        // 🔑 IMPORTANT
         recruiterId: {
             type: mongoose.Schema.Types.ObjectId,
             ref: "Recruiter"
@@ -65,4 +42,5 @@ const jobSchema = new mongoose.Schema(
     { timestamps: true }
 );
 
-module.exports = mongoose.model("Job", jobSchema);
+// Prevent model overwrite error
+module.exports = mongoose.models.Job || mongoose.model("Job", jobSchema);
