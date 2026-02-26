@@ -772,6 +772,13 @@ app.patch("/dashboard", adminAuth, (req, res, next) => {
 
         console.log("PATCH /dashboard - Processing for UID:", req.userId);
         const companyData = { ...req.body };
+        // Normalize single-value fields if they arrive as arrays
+        ["employees", "name", "tagline", "industry", "location", "website", "vision", "mission"].forEach(field => {
+            if (Array.isArray(companyData[field])) {
+                companyData[field] = companyData[field][0];
+            }
+        });
+
         // Sanitize
         delete companyData._id;
         delete companyData.email;
