@@ -765,24 +765,27 @@ app.patch("/dashboard", adminAuth, (req, res, next) => {
     });
 }, async (req, res) => {
     try {
+        if (!req.userId) {
+            console.error("PATCH /dashboard - No User ID found in request");
+            return res.status(401).json({ message: "Authentication failed", error: "No User ID" });
+        }
+
+        console.log("PATCH /dashboard - Processing for UID:", req.userId);
         const companyData = { ...req.body };
-        // Sanitize to prevent Mongoose errors with immutable fields
+        // Sanitize
         delete companyData._id;
-        delete companyData.email; // Also prevent changing email here if not intended
+        delete companyData.email;
         delete companyData.role;
 
-        console.log("PATCH /dashboard - User ID:", req.userId);
-        console.log("PATCH /dashboard - Data:", companyData);
-
-        // ✅ PARSE JSON FIELDS FIRST
+        // ✅ PARSE JSON FIELDS
         const jsonFields = ["services", "gallery", "team", "chooseUs"];
         jsonFields.forEach(field => {
             if (companyData[field] && typeof companyData[field] === "string" && companyData[field].trim() !== "") {
                 try {
                     companyData[field] = JSON.parse(companyData[field]);
+                    console.log(`Parsed ${field} successfully`);
                 } catch (parseError) {
                     console.error(`Error parsing JSON field ${field}:`, parseError.message);
-                    // Fallback for services if it's comma separated
                     if (field === "services") {
                         companyData[field] = companyData[field].split(",").map(i => i.trim()).filter(Boolean);
                     } else {
@@ -794,9 +797,10 @@ app.patch("/dashboard", adminAuth, (req, res, next) => {
 
         // ✅ HANDLE FILE UPLOADS
         if (req.files && req.files.length > 0) {
+            console.log(`Processing ${req.files.length} files...`);
             req.files.forEach(file => {
                 const fieldName = file.fieldname;
-                const fileUrl = file.path; // CLOUDINARY URL
+                const fileUrl = file.path;
 
                 if (fieldName === "logo") {
                     companyData.logo = fileUrl;
@@ -807,13 +811,14 @@ app.patch("/dashboard", adminAuth, (req, res, next) => {
                     companyData.gallery.push(fileUrl);
                 } else if (fieldName.startsWith("team_image_")) {
                     const index = parseInt(fieldName.split("_")[2]);
-                    if (Array.isArray(companyData.team) && companyData.team[index]) {
+                    if (!isNaN(index) && Array.isArray(companyData.team) && companyData.team[index]) {
                         companyData.team[index].image = fileUrl;
                     }
                 }
             });
         }
 
+        console.log("Saving company data to DB...");
         const updatedUser = await Company.findByIdAndUpdate(
             req.userId,
             { $set: companyData },
@@ -821,8 +826,11 @@ app.patch("/dashboard", adminAuth, (req, res, next) => {
         ).select("-password");
 
         if (!updatedUser) {
+            console.error("User not found for ID:", req.userId);
             return res.status(404).json({ message: "User not found" });
         }
+
+        console.log("Profile updated successfully for ID:", req.userId);
         res.json(updatedUser);
     } catch (err) {
         console.error("Dashboard update error:", err);
