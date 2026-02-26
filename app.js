@@ -752,11 +752,57 @@ app.get("/dashboard", adminAuth, async (req, res) => {
 });
 
 // 🔹 Update Company Profile (Protected)
-app.patch("/dashboard", adminAuth, async (req, res) => {
+app.patch("/dashboard", adminAuth, (req, res, next) => {
+    upload.any()(req, res, (err) => {
+        if (err) {
+            console.error("Multer/Cloudinary Error:", err);
+            return res.status(500).json({
+                message: "File upload failed",
+                error: err.message
+            });
+        }
+        next();
+    });
+}, async (req, res) => {
     try {
+        const companyData = { ...req.body };
+
+        // ✅ HANDLE FILE UPLOADS
+        if (req.files && req.files.length > 0) {
+            req.files.forEach(file => {
+                const fieldName = file.fieldname;
+                const fileUrl = file.path; // CLOUDINARY URL
+
+                if (fieldName === "logo") {
+                    companyData.logo = fileUrl;
+                } else if (fieldName === "gallery") {
+                    if (!Array.isArray(companyData.gallery)) {
+                        companyData.gallery = [];
+                    }
+                    companyData.gallery.push(fileUrl);
+                }
+            });
+        }
+
+        // ✅ PARSE JSON FIELDS
+        const jsonFields = ["services", "gallery", "team", "chooseUs"];
+        jsonFields.forEach(field => {
+            if (companyData[field] && typeof companyData[field] === "string" && companyData[field].trim() !== "") {
+                try {
+                    companyData[field] = JSON.parse(companyData[field]);
+                } catch (parseError) {
+                    console.error(`Error parsing JSON field ${field}:`, parseError.message);
+                    // Fallback for services if it's comma separated
+                    if (field === "services") {
+                        companyData[field] = companyData[field].split(",").map(i => i.trim()).filter(Boolean);
+                    }
+                }
+            }
+        });
+
         const updatedUser = await Company.findByIdAndUpdate(
             req.userId,
-            { $set: req.body },
+            { $set: companyData },
             { new: true, runValidators: true }
         ).select("-password");
 
