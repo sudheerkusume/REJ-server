@@ -766,6 +766,13 @@ app.patch("/dashboard", adminAuth, (req, res, next) => {
 }, async (req, res) => {
     try {
         const companyData = { ...req.body };
+        // Sanitize to prevent Mongoose errors with immutable fields
+        delete companyData._id;
+        delete companyData.email; // Also prevent changing email here if not intended
+        delete companyData.role;
+
+        console.log("PATCH /dashboard - User ID:", req.userId);
+        console.log("PATCH /dashboard - Data:", companyData);
 
         // ✅ PARSE JSON FIELDS FIRST
         const jsonFields = ["services", "gallery", "team", "chooseUs"];
@@ -819,7 +826,7 @@ app.patch("/dashboard", adminAuth, (req, res, next) => {
         res.json(updatedUser);
     } catch (err) {
         console.error("Dashboard update error:", err);
-        res.status(500).json({ message: "Server error" });
+        res.status(500).json({ message: "Server error", error: err.message });
     }
 });
 
