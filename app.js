@@ -767,6 +767,24 @@ app.patch("/dashboard", adminAuth, (req, res, next) => {
     try {
         const companyData = { ...req.body };
 
+        // ✅ PARSE JSON FIELDS FIRST
+        const jsonFields = ["services", "gallery", "team", "chooseUs"];
+        jsonFields.forEach(field => {
+            if (companyData[field] && typeof companyData[field] === "string" && companyData[field].trim() !== "") {
+                try {
+                    companyData[field] = JSON.parse(companyData[field]);
+                } catch (parseError) {
+                    console.error(`Error parsing JSON field ${field}:`, parseError.message);
+                    // Fallback for services if it's comma separated
+                    if (field === "services") {
+                        companyData[field] = companyData[field].split(",").map(i => i.trim()).filter(Boolean);
+                    } else {
+                        companyData[field] = [];
+                    }
+                }
+            }
+        });
+
         // ✅ HANDLE FILE UPLOADS
         if (req.files && req.files.length > 0) {
             req.files.forEach(file => {
@@ -780,25 +798,14 @@ app.patch("/dashboard", adminAuth, (req, res, next) => {
                         companyData.gallery = [];
                     }
                     companyData.gallery.push(fileUrl);
+                } else if (fieldName.startsWith("team_image_")) {
+                    const index = parseInt(fieldName.split("_")[2]);
+                    if (Array.isArray(companyData.team) && companyData.team[index]) {
+                        companyData.team[index].image = fileUrl;
+                    }
                 }
             });
         }
-
-        // ✅ PARSE JSON FIELDS
-        const jsonFields = ["services", "gallery", "team", "chooseUs"];
-        jsonFields.forEach(field => {
-            if (companyData[field] && typeof companyData[field] === "string" && companyData[field].trim() !== "") {
-                try {
-                    companyData[field] = JSON.parse(companyData[field]);
-                } catch (parseError) {
-                    console.error(`Error parsing JSON field ${field}:`, parseError.message);
-                    // Fallback for services if it's comma separated
-                    if (field === "services") {
-                        companyData[field] = companyData[field].split(",").map(i => i.trim()).filter(Boolean);
-                    }
-                }
-            }
-        });
 
         const updatedUser = await Company.findByIdAndUpdate(
             req.userId,
