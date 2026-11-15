@@ -930,11 +930,11 @@ app.post('/enquiries', async (req, res) => {
 })
 
 app.get('/enquiries', async (req, res) => {
-    const enquiries = await Enquiry.find()
-    if (enquiries.length > 0) {
-        res.send(enquiries)
-    } else {
-        res.send("No Enquiries Found")
+    try {
+        const enquiries = await Enquiry.find();
+        res.json(enquiries || []);
+    } catch (err) {
+        res.status(500).json([]);
     }
 })
 
@@ -993,11 +993,11 @@ app.get('/admin/jobCategories', adminAuth, async (req, res) => {
 })
 
 app.get('/jobCategories', async (req, res) => {
-    const jobs = await JobCategory.find();
-    if (jobs.length > 0) {
-        res.send(jobs)
-    } else {
-        res.send("No Job Categories Found")
+    try {
+        const jobs = await JobCategory.find();
+        res.json(jobs || []);
+    } catch (err) {
+        res.status(500).json([]);
     }
 })
 
@@ -1072,11 +1072,11 @@ app.post('/services', async (req, res) => {
 })
 
 app.get('/services', async (req, res) => {
-    const services = await Service.find()
-    if (services.length > 0) {
-        res.send(services)
-    } else {
-        res.send("No Services Found")
+    try {
+        const services = await Service.find();
+        res.json(services || []);
+    } catch (err) {
+        res.status(500).json([]);
     }
 })
 
@@ -1111,11 +1111,11 @@ app.post('/certifications', async (req, res) => {
 })
 
 app.get('/certifications', async (req, res) => {
-    const certifications = await Certification.find()
-    if (certifications.length > 0) {
-        res.send(certifications)
-    } else {
-        res.send("No Certifications Found")
+    try {
+        const certifications = await Certification.find();
+        res.json(certifications || []);
+    } catch (err) {
+        res.status(500).json([]);
     }
 })
 
